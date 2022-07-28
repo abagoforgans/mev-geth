@@ -190,11 +190,29 @@ func (st *StateTransition) to() common.Address {
 }
 
 func (st *StateTransition) buyGas() error {
+	mgval := new(big.Int).SetUint64(st.msg.Gas())
+	mgval = mgval.Mul(mgval, st.gasPrice)
+	balanceCheck := mgval
+	if st.gasFeeCap != nil {
+		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
+		balanceCheck = balanceCheck.Mul(balanceCheck, st.gasFeeCap)
+		balanceCheck.Add(balanceCheck, st.value)
+	}
+	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
+		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
+	}
+	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
+		return err
+	}
+	st.gas += st.msg.Gas()
+
+	st.initialGas = st.msg.Gas()
+	st.state.SubBalance(st.msg.From(), mgval)
 	return nil
 }
 
 func (st *StateTransition) preCheck() error {
-	return st.buyGas()
+	return nil
 }
 
 // TransitionDb will transition the state by applying the current message and
