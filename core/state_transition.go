@@ -212,7 +212,7 @@ func (st *StateTransition) buyGas() error {
 }
 
 func (st *StateTransition) preCheck() error {
-	return nil
+	return st.buyGas()
 }
 
 // TransitionDb will transition the state by applying the current message and
